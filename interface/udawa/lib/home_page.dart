@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:udawa/cubit/counter_cubit.dart';
 
 void main() {
@@ -32,7 +31,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final counterCubit = CounterCubit();
+  final counter = CounterCubit().state;
 
   @override
   Widget build(BuildContext context) {
@@ -48,36 +47,17 @@ class _MyHomePageState extends State<MyHomePage> {
             const Text(
               'You have pushed the button this many times:',
             ),
-            BlocBuilder<CounterCubit, int>(
-              bloc: counterCubit,
-              builder: (context, counter) {
-                return Text(
-                  '$counter',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                );
-              },
+            Text(
+              '$counter',
+              style: Theme.of(context).textTheme.headlineMedium,
             ),
           ],
         ),
       ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            onPressed: () {
-              counterCubit.increment();
-            },
-            tooltip: 'Increment',
-            child: const Icon(Icons.add),
-          ),
-          FloatingActionButton(
-            onPressed: () {
-              counterCubit.decrement();
-            },
-            tooltip: 'Decrement',
-            child: const Icon(Icons.remove),
-          ),
-        ],
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => CounterCubit().increment(),
+        tooltip: 'Increment',
+        child: const Icon(Icons.add),
       ),
     );
   }

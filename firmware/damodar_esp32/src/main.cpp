@@ -30,10 +30,14 @@ void setup()
     syncConfigCoMCU();
   }
   if(String(config.model) == String("Generic")){
-    strlcpy(config.model, "Vanilla", sizeof(config.model));
+    strlcpy(config.model, "Damodar", sizeof(config.model));
   }
 
   tb.setBufferSize(1024);
+
+  #ifdef USE_WEB_IFACE
+  xQueueWsPayloadSensors= xQueueCreate( 1, sizeof( struct WSPayloadSensors ) );
+  #endif
 
 
   if(xHandlePublishDevTel == NULL && !config.SM){
@@ -58,6 +62,7 @@ void setup()
       log_manager->warn(PSTR(__func__), PSTR("Task sensors has been created.\n"));
     }
   }
+
 }
 
 void loop(){
@@ -330,12 +335,15 @@ void wsSendTelemetryTR(void *arg){
         WSPayloadSensors payload;
         if( xQueueReceive( xQueueWsPayloadSensors,  &( payload ), ( TickType_t ) 0 ) == pdPASS )
         {
-          JsonObject sensors = doc.createNestedObject("sensors");
-          sensors[PSTR("data1")] = payload.data1;
-          sensors[PSTR("data2")] = payload.data2;
-          serializeJson(doc, buffer);
-          wsBroadcastTXT(buffer);
-          doc.clear();
+          if(payload.ppm != 0 && payload.cels != 0){
+            JsonObject sensors = doc.createNestedObject("sensors");
+            sensors[PSTR("ppm")] = payload.ppm;
+            sensors[PSTR("cels")] = payload.cels;
+            serializeJson(doc, buffer);
+            wsBroadcastTXT(buffer);
+            doc.clear();
+          }
+          
         }
       }
 
@@ -367,20 +375,81 @@ void onMQTTUpdateEnd(){
 }
 
 void sensorsTR(void *arg){
+  //Stream_Stats<float> _cels_;
+  //Stream_Stats<float> _ppm_;
+
+  unsigned long timerAttribute = millis();
+  unsigned long timerTelemetry = millis();
+
   while (true)
   {
     bool flag_failure_readings = false;
     myStates.flag_sensors = true;
 
-    float data1 = (float)random(17, 40);
-    float data2 = (float)random(0, 100);
+    float cels = 0;
+    float ppm = 0;
+
+    //read TDS from nano
+    unsigned long now = millis();
+    if(myStates.flag_sensors && !flag_failure_readings)
+    {
+      StaticJsonDocument<DOCSIZE_MIN> doc;
+      char buffer[DOCSIZE_MIN];
+      
+      if( (now - timerAttribute) > (mySettings.itSc * 1000))
+      {
+        doc[PSTR("method")] = PSTR("readSensors");
+        serialWriteToCoMcu(doc, true, 50);
+        if(doc[PSTR("cels")] != nullptr){cels = doc[PSTR("cels")].as<float>();}
+        if(doc[PSTR("ppm")] != nullptr){ppm = doc[PSTR("ppm")].as<float>();}
+
+        doc.clear();
+
+        //_cels_.Add(cels);
+        //_ppm_.Add(ppm);
+        
+        if(tb.connected() && config.provSent){
+          doc[PSTR("_ppm")] = ppm;
+          doc[PSTR("_cels")] = cels;
+          serializeJson(doc, buffer);
+          tbSendAttribute(buffer);
+          doc.clear();
+        }
+        
+
+        timerAttribute = now;
+      }
+
+      if( (now - timerTelemetry) > (mySettings.itS * 1000) )
+      {
+        if(ppm > 0 && ppm < 2000 && cels > 0 && cels < 100){
+          doc[PSTR("cels")] = cels;//_cels_.Get_Average();  
+          doc[PSTR("ppm")] = ppm;//_ppm_.Get_Average(); 
+
+          #ifdef USE_DISK_LOG  
+          writeCardLogger(doc);
+          #endif
+          if(tb.connected() && config.provSent)
+          {
+            serializeJson(doc, buffer);
+            if(tbSendTelemetry(buffer)){
+              
+            }
+          }
+          doc.clear();
+        }
+        //_cels_.Clear(); _ppm_.Clear();
+        timerTelemetry = now;
+      }
+
+    }
 
     #ifdef USE_WEB_IFACE
       if( xQueueWsPayloadSensors != NULL && (config.wsCount > 0) && myStates.flag_sensors && !flag_failure_readings)
       {
         WSPayloadSensors payload;
-        payload.data1 = data1;
-        payload.data2 = data2;
+        payload.ppm = ppm;
+        payload.cels = cels;
         if( xQueueSend( xQueueWsPayloadSensors, &payload, ( TickType_t ) 1000 ) != pdPASS )
         {
           log_manager->debug(PSTR(__func__), PSTR("Failed to fill WSPayloadSensors. Queue is full. \n"));

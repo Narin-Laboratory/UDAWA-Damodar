@@ -47,7 +47,7 @@ ny6l9/duT2POAsUN5IwHGDu8b2NT+vCUQRFVHY31
 -----END CERTIFICATE-----
 )EOF";
 
-#define CURRENT_FIRMWARE_TITLE "Vanilla"
+#define CURRENT_FIRMWARE_TITLE "Damodar"
 #define CURRENT_FIRMWARE_VERSION "0.0.1"
 #define DOCSIZE 1024
 #define DOCSIZE_MIN 512
@@ -69,7 +69,7 @@ ny6l9/duT2POAsUN5IwHGDu8b2NT+vCUQRFVHY31
 #define STACKSIZE_IFACE 3000
 #define STACKSIZE_PUBLISHDEVTEL 4500 //6000
 #define STACKSIZE_WSSENDTELEMETRY 4500 //6000
-#define STACKSIZE_SENSORS 2048
+#define STACKSIZE_SENSORS 4500
 
 
 #include <libudawa.h>
@@ -81,6 +81,9 @@ struct Settings
 {
     uint16_t itD = 60;
     uint16_t itDc = 1;
+
+    uint16_t itS = 60;
+    uint16_t itSc = 5;
 
     uint8_t s1tx = 33; //V3.1 33, V3 32
     uint8_t s1rx = 32; //V3.1 32, V3 4
@@ -95,8 +98,9 @@ States myStates;
 #ifdef USE_WEB_IFACE
 struct WSPayloadSensors
 {
-    float data1;
-    float data2;
+    float ppm;
+    float ec;
+    float cels;
 };
 QueueHandle_t xQueueWsPayloadSensors;
 #endif

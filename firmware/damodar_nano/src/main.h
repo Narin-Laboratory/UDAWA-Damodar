@@ -3,5 +3,14 @@
 
 struct Settings
 {
-    int example;
+    int pinTdsData = A0;
 };
+
+struct Sensors
+{
+   float ppm;
+   float cels;
+};
+
+
+void readSensors();

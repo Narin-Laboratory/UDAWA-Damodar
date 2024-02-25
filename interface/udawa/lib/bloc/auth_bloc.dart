@@ -1,12 +1,9 @@
-import 'dart:io';
-
 import 'package:bloc/bloc.dart';
 import 'package:meta/meta.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:udawa/models/mdns_device_model.dart';
 import 'package:multicast_dns/multicast_dns.dart';
-import 'dart:convert';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -14,6 +11,7 @@ part 'auth_state.dart';
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc() : super(AuthInitial()) {
     on<AuthDeviceScannerRequested>(_onAuthDeviceScannerRequested);
+    on<AuthLocalRequested>(_onAuthLocalRequested);
   }
 
   void _onAuthDeviceScannerRequested(
@@ -52,5 +50,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     await Future.delayed(const Duration(seconds: 1), () {
       emit(AuthDeviceScannerFinished(mdnsDeviceList: deviceList));
     });
+  }
+
+  void _onAuthLocalRequested(
+    AuthLocalRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    if (event.ip == "") {
+      emit(AuthLocalError(error: "Device IP Address can not be empty!"));
+      return;
+    }
+
+    if (event.webApiKey == "") {
+      emit(AuthLocalError(error: "Web API Key can not be empty!"));
+      return;
+    }
+
+    emit(AuthLocalStarted());
+
+    try {} catch (e) {
+      return emit(AuthLocalError(error: e.toString()));
+    } finally {}
   }
 }

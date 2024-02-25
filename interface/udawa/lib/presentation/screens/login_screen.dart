@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:udawa/bloc/auth_bloc.dart';
@@ -15,7 +13,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final webApiKeyController = TextEditingController();
-  final deviceIpAddress = TextEditingController();
+  final deviceIpAddressController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +21,22 @@ class _LoginScreenState extends State<LoginScreen> {
         body: BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         // TODO: implement listener
+        if (state is AuthLocalError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Failed to connect: ${state.error}"),
+            ),
+          );
+        }
+
+        if (state is AuthLocalStarted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  "Trying to connect to ${deviceIpAddressController.text}"),
+            ),
+          );
+        }
       },
       builder: (context, state) {
         return Scaffold(
@@ -55,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     LoginField(
                       labelText: "Device IP Address",
                       onChanged: (value) {},
-                      controller: deviceIpAddress,
+                      controller: deviceIpAddressController,
                     ),
                     const SizedBox(height: 15),
                     LoginField(
@@ -78,10 +92,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
                                 if (selectedDevice != null) {
                                   // Do something with the selectedItem
-                                  deviceIpAddress.text =
+                                  deviceIpAddressController.text =
                                       selectedDevice.address.address;
-                                  print(selectedDevice.name);
-                                  print(selectedDevice.address);
                                 }
                               },
                               icon: Icon(Icons.search),
@@ -91,7 +103,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             width: 10), // Add spacing between buttons
                         Expanded(
                           child: ElevatedButton.icon(
-                              onPressed: () {},
+                              onPressed: () {
+                                context.read<AuthBloc>().add(AuthLocalRequested(
+                                    ip: deviceIpAddressController.text,
+                                    webApiKey: webApiKeyController.text));
+                              },
                               icon: Icon(Icons.connect_without_contact_sharp),
                               label: Text("Connect")),
                         ),

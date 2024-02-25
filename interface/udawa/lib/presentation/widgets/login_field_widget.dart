@@ -25,7 +25,6 @@ class LoginField extends StatefulWidget {
 class _LoginFieldState extends State<LoginField> {
   @override
   void dispose() {
-    widget.controller.dispose();
     super.dispose();
   }
 

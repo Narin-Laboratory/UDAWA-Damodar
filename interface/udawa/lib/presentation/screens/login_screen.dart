@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:udawa/bloc/auth_bloc.dart';
@@ -14,6 +15,13 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final webApiKeyController = TextEditingController();
   final deviceIpAddressController = TextEditingController();
+
+  @override
+  void dispose() {
+    webApiKeyController.dispose();
+    deviceIpAddressController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,72 +56,77 @@ class _LoginScreenState extends State<LoginScreen> {
             // Center the content within the Scaffold's body
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: maxWidth),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisAlignment:
-                      MainAxisAlignment.center, // Center vertically
-                  children: [
-                    SizedBox(
-                      width: 90.0, // Set your desired width
-                      height: 90.0, // Set your desired height
-                      child: Image.asset('assets/images/logo.png'),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text("UDAWA Smart System",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w100,
-                          fontSize: 22,
-                          color: Colors.green,
-                        )),
-                    const SizedBox(height: 15),
-                    LoginField(
-                      labelText: "Device IP Address",
-                      onChanged: (value) {},
-                      controller: deviceIpAddressController,
-                    ),
-                    const SizedBox(height: 15),
-                    LoginField(
-                      labelText: "Web Api Key",
-                      obscureText: true,
-                      onChanged: (value) {},
-                      controller: webApiKeyController,
-                    ),
-                    const SizedBox(height: 25),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextButton.icon(
-                              onPressed: () async {
-                                final selectedDevice =
-                                    await showDialog<MdnsDevice>(
-                                  context: context,
-                                  builder: (context) => const SelectionPopup(),
-                                );
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisAlignment:
+                        MainAxisAlignment.center, // Center vertically
+                    children: [
+                      SizedBox(
+                        width: 90.0, // Set your desired width
+                        height: 90.0, // Set your desired height
+                        child: Image.asset('assets/images/logo.png'),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text("UDAWA Smart System",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w100,
+                            fontSize: 22,
+                            color: Colors.green,
+                          )),
+                      const SizedBox(height: 15),
+                      LoginField(
+                        labelText: "Device IP Address",
+                        onChanged: (value) {},
+                        controller: deviceIpAddressController,
+                      ),
+                      const SizedBox(height: 15),
+                      LoginField(
+                        labelText: "Web Api Key",
+                        obscureText: true,
+                        onChanged: (value) {},
+                        controller: webApiKeyController,
+                      ),
+                      const SizedBox(height: 25),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextButton.icon(
+                                onPressed: () async {
+                                  final selectedDevice =
+                                      await showDialog<MdnsDevice>(
+                                    context: context,
+                                    builder: (context) =>
+                                        const SelectionPopup(),
+                                  );
 
-                                if (selectedDevice != null) {
-                                  // Do something with the selectedItem
-                                  deviceIpAddressController.text =
-                                      selectedDevice.address.address;
-                                }
-                              },
-                              icon: Icon(Icons.search),
-                              label: Text("Search")),
-                        ),
-                        const SizedBox(
-                            width: 10), // Add spacing between buttons
-                        Expanded(
-                          child: ElevatedButton.icon(
-                              onPressed: () {
-                                context.read<AuthBloc>().add(AuthLocalRequested(
-                                    ip: deviceIpAddressController.text,
-                                    webApiKey: webApiKeyController.text));
-                              },
-                              icon: Icon(Icons.connect_without_contact_sharp),
-                              label: Text("Connect")),
-                        ),
-                      ],
-                    )
-                  ],
+                                  if (selectedDevice != null) {
+                                    // Do something with the selectedItem
+                                    deviceIpAddressController.text =
+                                        selectedDevice.address.address;
+                                  }
+                                },
+                                icon: Icon(Icons.search),
+                                label: Text("Search")),
+                          ),
+                          const SizedBox(
+                              width: 10), // Add spacing between buttons
+                          Expanded(
+                            child: ElevatedButton.icon(
+                                onPressed: () {
+                                  context.read<AuthBloc>().add(
+                                      AuthLocalRequested(
+                                          ip: deviceIpAddressController.text,
+                                          webApiKey: webApiKeyController.text));
+                                },
+                                icon: Icon(Icons.connect_without_contact_sharp),
+                                label: Text("Connect")),
+                          ),
+                        ],
+                      )
+                    ],
+                  ),
                 ),
               ),
             ),

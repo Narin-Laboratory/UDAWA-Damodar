@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:udawa/bloc/auth_bloc.dart';
+import 'package:udawa/data/data_provider/websocket_data_provider.dart';
 import 'package:udawa/models/mdns_device_model.dart';
 import 'package:udawa/presentation/widgets/login_field_widget.dart';
 
@@ -15,6 +16,31 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final webApiKeyController = TextEditingController();
   final deviceIpAddressController = TextEditingController();
+
+  bool _isConnectButtonDisabled = false;
+
+  void _handleConnectButtonClick() {
+    if (!_isConnectButtonDisabled) {
+      // Disable the button
+      setState(() {
+        _isConnectButtonDisabled = true;
+      });
+
+      // Perform your action here
+      // For example, make network request, process data, etc.
+
+      context.read<AuthBloc>().add(AuthLocalRequested(
+          ip: deviceIpAddressController.text,
+          webApiKey: webApiKeyController.text));
+
+      // After the action is completed, enable the button again
+      Future.delayed(Duration(seconds: 10), () {
+        setState(() {
+          _isConnectButtonDisabled = false;
+        });
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -37,11 +63,18 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
 
-        if (state is AuthLocalStarted) {
+        if (state is AuthLocalOnProcess) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                  "Trying to connect to ${deviceIpAddressController.text}"),
+              content: Text("${state.message}"),
+            ),
+          );
+        }
+
+        if (state is AuthLocalSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Connected!"),
             ),
           );
         }
@@ -114,12 +147,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               width: 10), // Add spacing between buttons
                           Expanded(
                             child: ElevatedButton.icon(
-                                onPressed: () {
-                                  context.read<AuthBloc>().add(
-                                      AuthLocalRequested(
-                                          ip: deviceIpAddressController.text,
-                                          webApiKey: webApiKeyController.text));
-                                },
+                                onPressed: _isConnectButtonDisabled
+                                    ? null
+                                    : _handleConnectButtonClick,
                                 icon: Icon(Icons.connect_without_contact_sharp),
                                 label: Text("Connect")),
                           ),

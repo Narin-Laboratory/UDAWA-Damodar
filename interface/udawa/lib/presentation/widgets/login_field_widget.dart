@@ -9,20 +9,20 @@ class LoginField extends StatefulWidget {
   final TextEditingController controller;
 
   const LoginField({
-    Key? key,
+    super.key,
     required this.labelText,
     this.hintText,
     this.obscureText = false,
     this.keyboardType,
     required this.onChanged,
     required this.controller,
-  }) : super(key: key);
+  });
 
   @override
-  _LoginFieldState createState() => _LoginFieldState();
+  LoginFieldState createState() => LoginFieldState();
 }
 
-class _LoginFieldState extends State<LoginField> {
+class LoginFieldState extends State<LoginField> {
   @override
   void dispose() {
     super.dispose();

@@ -1,7 +1,7 @@
 #include "main.h"
 #include <OneWire.h>
 #include <DallasTemperature.h>
-
+#include <ArduinoJson.h>
 
 libudawaatmega328 nano;
 Settings mySettings;
@@ -10,11 +10,7 @@ Sensors sensors;
 OneWire oneWireDS18B20(mySettings.pinSuhuData);
 DallasTemperature ds18b20(&oneWireDS18B20);
 
-// Variabel-variabel untuk Filter Kalman
-float estimasi_ppm = 0; // Estimasi nilai ppm oleh filter Kalman
-float error_estimasi = 1; // Error estimasi (P)
-float error_pengukuran = 3; // Error pengukuran (R), asumsikan nilai ini atau sesuaikan berdasarkan kebisingan sensor
-float kalman_gain = 0; // Kalman gain (K) // Sensor noise. Adjust this value based on your sensor's performance.
+
 
 void setup() {
   // put your setup code here, to run once:
@@ -44,30 +40,21 @@ void loop() {
   }
   doc.clear();
 }
-
-void readSensors(){
+void readSensors() {
+  // Baca suhu
+  ds18b20.requestTemperatures();
+  sensors.cels = ds18b20.getTempCByIndex(0);
   
-      // Membaca nilai sensor TDS
-    int sensorValueTds = analogRead(mySettings.pinTdsData);
-
-    // Memperbarui estimasi dengan prediksi sebelumnya
-    float prediksi_ppm = estimasi_ppm; // Dalam kasus sederhana ini, modelnya adalah identitas
-
-    // Menghitung Kalman Gain
-    kalman_gain = error_estimasi / (error_estimasi + error_pengukuran);
-
-    // Memperbarui estimasi dengan pengukuran terkini
-    estimasi_ppm = prediksi_ppm + kalman_gain * (sensorValueTds - prediksi_ppm);
-
-    // Memperbarui error estimasi
-    error_estimasi = (1 - kalman_gain) * error_estimasi;
-
-    // Simpan nilai ppm yang difilter ke dalam struktur Sensors
-    sensors.ppm = estimasi_ppm;
-
-    ds18b20.requestTemperatures();  // Mengirim perintah untuk membaca suhu
-    float temperatureCelsius = ds18b20.getTempCByIndex(0);  // Mengambil nilai suhu dalam derajat Celsius
-
-    // Menyimpan nilai suhu ke dalam struktur Sensors
-    sensors.cels = temperatureCelsius;
+  // Baca dan filter pembacaan TDS
+  int analogValue = analogRead(mySettings.pinTdsData);
+  float voltage = analogValue * (5.0 / 1023.0);
+  float tdsRawValue = (voltage - 0.0) * 314.34; //koveksi tegangan ke ppm
+  
+  
+  // Update filter Kalman
+  sensors.P = sensors.P + sensors.Q;
+  sensors.K = sensors.P / (sensors.P + sensors.R);
+  sensors.X = sensors.X + sensors.K * (tdsRawValue - sensors.X);
+  sensors.P = (1 - sensors.K) * sensors.P;
+  sensors.ppm = sensors.X;
 }

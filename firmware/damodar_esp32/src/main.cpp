@@ -405,8 +405,8 @@ void sensorsTR(void *arg){
 
         doc.clear();
 
-        //_cels_.Add(cels);
-        //_ppm_.Add(ppm);
+        // _cels_.Add(cels);
+        // _ppm_.Add(ppm);
         
         if(tb.connected() && config.provSent){
           doc[PSTR("_ppm")] = ppm;

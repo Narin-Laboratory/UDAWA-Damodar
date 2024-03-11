@@ -51,7 +51,7 @@ void readSensors() {
   int analogValue = analogRead(mySettings.pinTdsData);
   float voltage = analogValue * (5.0 / 1023.0);
 
- float tempCoefficient = 1.0 + 0.02 * (temperatureC - 25.0);
+ float tempCoefficient = 1.0 + 0.02 * (temperatureC - 25.0); //pengunaan nilai suhu
  float compensationVoltage = voltage / tempCoefficient;
  
  float tdsFactor = 0.5 * (337.0 / 370.0);

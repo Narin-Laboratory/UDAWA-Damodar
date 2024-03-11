@@ -43,18 +43,26 @@ void loop() {
 void readSensors() {
   // Baca suhu
   ds18b20.requestTemperatures();
-  sensors.cels = ds18b20.getTempCByIndex(0);
+  float temperatureC = ds18b20.getTempCByIndex(0);
+  sensors.cels = temperatureC; 
+
   
-  // Baca dan filter pembacaan TDS
+  // Baca sensor TDS dengan Kalman Filter
   int analogValue = analogRead(mySettings.pinTdsData);
   float voltage = analogValue * (5.0 / 1023.0);
-  float tdsRawValue = (voltage - 0.0) * 314.34; //koveksi tegangan ke ppm
-  
-  
-  // Update filter Kalman
+
+ float tempCoefficient = 1.0 + 0.02 * (temperatureC - 25.0);
+ float compensationVoltage = voltage / tempCoefficient;
+ 
+ float tdsFactor = 0.5 * (337.0 / 370.0);
+ float tdsValue = (133.42 * compensationVoltage * compensationVoltage * compensationVoltage - 255.86 * compensationVoltage * compensationVoltage + 857.39 * compensationVoltage) * tdsFactor;
+
+  //Kalman Filter
   sensors.P = sensors.P + sensors.Q;
   sensors.K = sensors.P / (sensors.P + sensors.R);
-  sensors.X = sensors.X + sensors.K * (tdsRawValue - sensors.X);
+  sensors.X = sensors.X + sensors.K * (tdsValue - sensors.X);
   sensors.P = (1 - sensors.K) * sensors.P;
   sensors.ppm = sensors.X;
 }
+
+

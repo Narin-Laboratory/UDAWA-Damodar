@@ -2,6 +2,7 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <ArduinoJson.h>
+#include <GravityTDS.h>
 
 libudawaatmega328 nano;
 Settings mySettings;
@@ -9,11 +10,14 @@ Sensors sensors;
 
 OneWire oneWireDS18B20(mySettings.pinSuhuData);
 DallasTemperature ds18b20(&oneWireDS18B20);
-
-
+GravityTDS gravityTDS;
 
 void setup() {
-  // put your setup code here, to run once:
+  ds18b20.begin();
+  gravityTDS.setPin(mySettings.pinTdsData);
+  gravityTDS.setAref(5.0);
+  gravityTDS.setAdcRange(1024);
+  gravityTDS.begin();
   nano.begin();
 }
 
@@ -41,26 +45,23 @@ void loop() {
   doc.clear();
 }
 void readSensors() {
-  // Baca suhu
-  ds18b20.requestTemperatures();
-  float temperatureC = ds18b20.getTempCByIndex(0);
-  sensors.cels = temperatureC; 
+    //Baca suhu
+    ds18b20.requestTemperatures();
 
-  
-  // Baca sensor TDS dengan Kalman Filter
-  int analogValue = analogRead(mySettings.pinTdsData);
-  float voltage = analogValue * (5.0 / 1023.0);
+    //Baca TdS dengan set nilai suhu
+    gravityTDS.setTemperature(ds18b20.getTempCByIndex(0));
+    gravityTDS.update();
+    float tdsValue = gravityTDS.getTdsValue();
 
- float tempCoefficient = 1.0 + 0.02 * (temperatureC - 25.0); //pengunaan nilai suhu
- float compensationVoltage = voltage / tempCoefficient;
- 
- float tdsFactor = 0.5 * (337.0 / 370.0);
- float tdsValue = (133.42 * compensationVoltage * compensationVoltage * compensationVoltage - 255.86 * compensationVoltage * compensationVoltage + 857.39 * compensationVoltage) * tdsFactor;
+  //Kalman Filter untuk TDS
+   sensors.P = sensors.P + sensors.Q;
+   sensors.K = sensors.P / (sensors.P + sensors.R);
+   sensors.X = sensors.X + sensors.K * (tdsValue - sensors.X);
+   sensors.P = (1 - sensors.K) * sensors.P;
 
-  //Kalman Filter
-  sensors.P = sensors.P + sensors.Q;
-  sensors.K = sensors.P / (sensors.P + sensors.R);
-  sensors.X = sensors.X + sensors.K * (tdsValue - sensors.X);
-  sensors.P = (1 - sensors.K) * sensors.P;
-  sensors.ppm = sensors.X;
+
+  // Menyesuaikan pembacaan TDS dengan faktor koreksi
+    float correctionFactor = 345.0 / 396.0;
+    sensors.ppm = sensors.X * correctionFactor; // Menyesuaikan nilai ppm dengan faktor koreksi
+    sensors.cels = ds18b20.getTempCByIndex(0); //Nilai Suhu
 }

@@ -64,5 +64,3 @@ void readSensors() {
   sensors.P = (1 - sensors.K) * sensors.P;
   sensors.ppm = sensors.X;
 }
-
-

@@ -1,10 +1,11 @@
 /**
  * UDAWA - Universal Digital Agriculture Watering Assistant
- * Firmware for Vanilla UDAWA Board (Starter Kit)
+ * Firmware for Damodar UDAWA Board (Fertigation Water Monitoring)
  * Licensed under aGPLv3
  * Researched and developed by PRITA Research Group & Narin Laboratory
  * prita.undiknas.ac.id | narin.co.id
 **/
+
 #ifndef main_h
 #define main_h
 #include <Arduino.h>
@@ -47,7 +48,7 @@ ny6l9/duT2POAsUN5IwHGDu8b2NT+vCUQRFVHY31
 -----END CERTIFICATE-----
 )EOF";
 
-#define CURRENT_FIRMWARE_TITLE "Damodar"
+#define CURRENT_FIRMWARE_TITLE "Prahlad"
 #define CURRENT_FIRMWARE_VERSION "0.0.1"
 #define DOCSIZE 1024
 #define DOCSIZE_MIN 512
@@ -58,10 +59,10 @@ ny6l9/duT2POAsUN5IwHGDu8b2NT+vCUQRFVHY31
 #define USE_INTERNAL_UI
 //#define USE_HW_RTC
 #define USE_WIFI_OTA
-//#define USE_WIFI_LOGGER
+#define USE_WIFI_LOGGER
 //#define USE_SDCARD_LOG
-//#define USE_SPIFFS_LOG
-//#define USE_DISK_LOG
+#define USE_SPIFFS_LOG
+#define USE_DISK_LOG
 #define STACKSIZE_WIFIKEEPER 3000
 #define STACKSIZE_SETALARM 3700
 #define STACKSIZE_WIFIOTA 4096
@@ -74,19 +75,54 @@ ny6l9/duT2POAsUN5IwHGDu8b2NT+vCUQRFVHY31
 
 #include <libudawa.h>
 #include <TimeLib.h>
+#include <Statistical.h>
 
 using namespace libudawa;
 const char* settingsPath = PSTR("/settings.json");
 struct Settings
 {
-    uint16_t itD = 60;
-    uint16_t itDc = 1;
+    uint16_t itDt = 60000;
+    uint16_t itDa = 10000;
+    uint16_t itDr = 1000;
 
-    uint16_t itS = 60;
-    uint16_t itSc = 5;
+    uint16_t itSt = 60000;
+    uint16_t itSa = 5000;
+    uint16_t itSr = 1000;
 
     uint8_t s1tx = 33; //V3.1 33, V3 32
     uint8_t s1rx = 32; //V3.1 32, V3 4
+
+    int pinTDS = 14; 
+    int pinCels = 4; 
+    int pinLoad = 9;
+    int pinFan = 10;
+
+    float VREF = 5.0;  
+
+    /*
+    x_est represents the current state estimation.
+    P_est represents the current estimation error covariance.
+    Q is the process noise covariance, representing the uncertainty in the process dynamics.
+    R is the measurement noise covariance, representing the uncertainty in the sensor measurements.
+    */
+
+    float tdsXEst = 100.0;
+    float tdsPEst = 1;
+    float tdsQ = 0.01;     
+    float tdsR = 1.0; 
+    float tdsK = 0.0;
+    float tdsPTmp = 0.0;
+    float tdsXTmp = 0.0;
+    int TDSSamp = 50;
+
+    float celsXEst = 25.0;
+    float celsPEst = 1;
+    float celsQ = 0.01;     
+    float celsR = 1.0; 
+    float celsK = 0.0;
+    float celsPTmp = 0.0;
+    float celsXTmp = 0.0;
+    
 };
 
 struct States
@@ -99,13 +135,43 @@ States myStates;
 struct WSPayloadSensors
 {
     float ppm;
+    float ppmRaw;
+    float ppmAvg;
+    float ppmMax;
+    float ppmMin;
     float ec;
+   
     float cels;
+    float celsRaw;
+    float celsAvg;
+    float celsMax;
+    float celsMin;
+
+    float volt;
+    float voltRaw;
+    float voltMin;
+    float voltMax;
+    float voltAvg;
+
+    float amp;
+    float ampRaw;
+    float ampMin;
+    float ampMax;
+    float ampAvg;
+
+    float watt;
+    float wattRaw;
+    float wattMin;
+    float wattMax;
+    float wattAvg;
+
+    unsigned long ts;
 };
 QueueHandle_t xQueueWsPayloadSensors;
 #endif
 
 Settings mySettings;
+WSPayloadSensors sensors;
 
 BaseType_t xReturnedWsSendTelemetry;
 BaseType_t xReturnedPublishDevTel;
@@ -117,6 +183,8 @@ TaskHandle_t xHandleSensors = NULL;
 
 SemaphoreHandle_t xSemaphoreSensors = NULL;
 
+
+float calcKalmanFilter(float raw, float &Q, float &R, float &x_est, float &P_est, float &K, float &P_temp, float &x_temp);
 void loadSettings();
 void saveSettings();
 void attUpdateCb(const Shared_Attribute_Data &data);

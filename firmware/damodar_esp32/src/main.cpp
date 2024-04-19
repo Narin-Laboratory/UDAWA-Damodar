@@ -1,10 +1,11 @@
 /**
  * UDAWA - Universal Digital Agriculture Watering Assistant
- * Firmware for Vanilla UDAWA Board (Starter Kit)
+ * Firmware for Damodar UDAWA Board (Fertigation Water Monitoring)
  * Licensed under aGPLv3
  * Researched and developed by PRITA Research Group & Narin Laboratory
  * prita.undiknas.ac.id | narin.co.id
 **/
+
 #include "main.h"
 
 void setup()
@@ -30,7 +31,7 @@ void setup()
     syncConfigCoMCU();
   }
   if(String(config.model) == String("Generic")){
-    strlcpy(config.model, "Damodar", sizeof(config.model));
+    strlcpy(config.model, "Gadadar", sizeof(config.model));
   }
 
   tb.setBufferSize(1024);
@@ -62,7 +63,6 @@ void setup()
       log_manager->warn(PSTR(__func__), PSTR("Task sensors has been created.\n"));
     }
   }
-
 }
 
 void loop(){
@@ -72,6 +72,156 @@ void loop(){
   }
   vTaskDelay((const TickType_t) 1000 / portTICK_PERIOD_MS);
 }
+
+float calcKalmanFilter(float raw, float &Q, float &R, float &x_est, float &P_est, float &K, float &P_temp, float &x_temp) {
+  // Prediction step
+  P_temp = P_est + Q;
+
+  // Measurement update step
+  K = P_temp / (P_temp + R);
+  x_temp = x_est + K * (raw - x_est);
+  P_est = (1 - K) * P_temp;
+  x_est = x_temp;
+
+  //log_manager->verbose(PSTR(__func__), PSTR("%.2f \t\t %.2f\n"), raw, x_est);
+
+  return x_est;
+}
+
+void sensorsTR(void *arg){
+  Stream_Stats<float> _cels_;
+  Stream_Stats<float> _ppm_;
+  float ppmRaw = 0;
+  float celsRaw = 0;
+
+  unsigned long timerReading = millis();
+  unsigned long timerAttribute = millis();
+  unsigned long timerTelemetry = millis();
+  unsigned long timerReadRawCels = millis();
+  unsigned long timerReadRawTDS = millis();
+  unsigned long timerReadRawPower = millis();
+
+  while (true)
+  {
+    bool flag_failure_readings = false;
+    myStates.flag_sensors = true;
+
+    //read TDS from nano
+    unsigned long now = millis();
+    if(myStates.flag_sensors && !flag_failure_readings)
+    {
+      StaticJsonDocument<DOCSIZE_MIN> doc;
+      char buffer[DOCSIZE_MIN];
+
+      if((now - timerReadRawCels) > 10000){
+        doc.clear();
+        doc[PSTR("method")] = PSTR("readRawCels");
+        serialWriteToCoMcu(doc, true, 1000);
+        if(doc[PSTR("celsRaw")] != nullptr){sensors.celsRaw = doc[PSTR("celsRaw")].as<float>();}
+        doc.clear();
+
+        sensors.cels = calcKalmanFilter(sensors.celsRaw, mySettings.celsQ, mySettings.celsR, 
+          mySettings.celsXEst, mySettings.celsPEst, mySettings.celsK, mySettings.celsPTmp, mySettings.celsXTmp);
+        _cels_.Add(sensors.cels);
+
+        timerReadRawCels = now;
+      }
+
+      if((now - timerReadRawTDS) > 500){
+        doc.clear();
+        doc[PSTR("method")] = PSTR("readRawTDS");
+        serialWriteToCoMcu(doc, true, 255);
+        if(doc[PSTR("ppmRaw")] != nullptr){sensors.ppmRaw = doc[PSTR("ppmRaw")].as<float>();}
+        doc.clear();
+
+        sensors.ppm = calcKalmanFilter(sensors.ppmRaw, mySettings.tdsQ, mySettings.tdsR, 
+          mySettings.tdsXEst, mySettings.tdsPEst, mySettings.tdsK, mySettings.tdsPTmp, mySettings.tdsXTmp);
+        _ppm_.Add(sensors.ppm);
+
+        timerReadRawTDS = now;
+      }
+      
+      if( (now - timerReading) > (mySettings.itSr))
+      {
+        
+        #ifdef USE_WEB_IFACE
+          if( xQueueWsPayloadSensors != NULL && (config.wsCount > 0) && myStates.flag_sensors && !flag_failure_readings)
+          {
+            WSPayloadSensors payload;
+            payload.ppm = sensors.ppm;
+            payload.ppmRaw = sensors.ppmRaw;
+            payload.ppmAvg = sensors.ppmAvg;
+            payload.ppmMax = sensors.ppmMax;
+            payload.ppmMin = sensors.ppmMin;
+
+            payload.cels = sensors.cels;
+            payload.celsRaw = sensors.celsRaw;
+            payload.celsAvg = sensors.celsAvg;
+            payload.celsMax = sensors.celsMax;
+            payload.celsMin = sensors.celsMin;
+
+            payload.ts = rtc.getEpoch();
+            if( xQueueSend( xQueueWsPayloadSensors, &payload, ( TickType_t ) mySettings.itSr ) != pdPASS )
+            {
+              log_manager->debug(PSTR(__func__), PSTR("Failed to fill WSPayloadSensors. Queue is full. \n"));
+            }
+          }
+        #endif
+
+
+        timerReading = now;
+      }
+
+      if( (now - timerAttribute) > (mySettings.itSa))
+      {
+        if(tb.connected() && config.provSent){
+          doc[PSTR("_ppm")] = _ppm_.Get_Last();
+          doc[PSTR("_cels")] = _cels_.Get_Last();
+          serializeJson(doc, buffer);
+          tbSendAttribute(buffer);
+          doc.clear();
+        }
+        timerAttribute = now;
+      }
+
+      if( (now - timerTelemetry) > (mySettings.itSt) )
+      {
+        sensors.ppmAvg = _ppm_.Get_Average();
+        sensors.ppmMax = _ppm_.Get_Max();
+        sensors.ppmMin = _ppm_.Get_Min();
+
+        sensors.celsAvg = _cels_.Get_Average();
+        sensors.celsMax = _cels_.Get_Max();
+        sensors.celsMin = _cels_.Get_Min();
+
+        if(_ppm_.Get_Last() > 0 && _ppm_.Get_Last() < 2000 && _cels_.Get_Last() > 0 && _cels_.Get_Last() < 100){
+          doc[PSTR("cels")] = _cels_.Get_Average();  
+          doc[PSTR("ppm")] = _ppm_.Get_Average(); 
+
+          #ifdef USE_DISK_LOG  
+          writeCardLogger(doc);
+          #endif
+          if(tb.connected() && config.provSent)
+          {
+            serializeJson(doc, buffer);
+            if(tbSendTelemetry(buffer)){
+              
+            }
+          }
+          doc.clear();
+        }
+        
+        _cels_.Clear(); _ppm_.Clear();
+
+        timerTelemetry = now;
+      }
+
+    }
+    
+    vTaskDelay((const TickType_t) 100 / portTICK_PERIOD_MS);
+  }
+}
+
 
 void setPanic(const RPC_Data &data){
   
@@ -87,8 +237,8 @@ void loadSettings()
     Serial.println("\n");
   }
 
-  if(doc["itD"] != nullptr){mySettings.itD = doc["itD"].as<uint16_t>();}
-  else{mySettings.itD = 15;}
+  if(doc["itDt"] != nullptr){mySettings.itDt = doc["itDt"].as<uint16_t>();}
+  else{mySettings.itDt = 60000;}
 
   if(doc["s1rx"] != nullptr){mySettings.s1rx = doc["s1rx"].as<uint8_t>();}
   else{mySettings.s1rx = 32;}
@@ -101,7 +251,7 @@ void saveSettings()
 {
   StaticJsonDocument<DOCSIZE_SETTINGS> doc;
 
-  doc["itD"] = mySettings.itD;
+  doc["itDt"] = mySettings.itDt;
 
   doc["s1tx"] = mySettings.s1tx;
   doc["s1rx"] = mySettings.s1rx;
@@ -122,7 +272,7 @@ void attUpdateCb(const Shared_Attribute_Data &data)
   if( xSemaphoreSettings != NULL ){
     if( xSemaphoreTake( xSemaphoreSettings, ( TickType_t ) 1000 ) == pdTRUE )
     {
-      if(data["itD"] != nullptr){mySettings.itD = data["itD"].as<uint16_t>();}
+      if(data["itDt"] != nullptr){mySettings.itDt = data["itDt"].as<uint16_t>();}
       
       if(data["s1tx"] != nullptr){mySettings.s1tx = data["s1tx"].as<uint8_t>();}
       if(data["s1rx"] != nullptr){mySettings.s1rx = data["s1rx"].as<uint8_t>();}
@@ -210,7 +360,7 @@ void publishDeviceTelemetryTR(void * arg){
 
     
     unsigned long now = millis();
-    if( (now - timerDeviceTelemetry) > mySettings.itD * 1000 ){
+    if( (now - timerDeviceTelemetry) > mySettings.itDt * 1000 ){
       deviceTelemetry();
       timerDeviceTelemetry = now;
     }
@@ -227,7 +377,7 @@ void onSyncClientAttr(uint8_t direction){
     
 
     if(tb.connected() && (direction == 0 || direction == 1)){
-      doc[PSTR("itD")] = mySettings.itD;
+      doc[PSTR("itDt")] = mySettings.itDt;
       doc[PSTR("s1rx")] = mySettings.s1rx;
       doc[PSTR("s1tx")] = mySettings.s1tx;
       serializeJson(doc, buffer);
@@ -319,8 +469,8 @@ void onWsEvent(const JsonObject &doc){
 void wsSendTelemetryTR(void *arg){
   while(true){
     if(config.fIface && config.wsCount > 0){
-      char buffer[128];
-      StaticJsonDocument<128> doc;
+      char buffer[512];
+      StaticJsonDocument<512> doc;
       JsonObject devTel = doc.createNestedObject("devTel");
       devTel[PSTR("heap")] = heap_caps_get_free_size(MALLOC_CAP_8BIT);
       devTel[PSTR("rssi")] = WiFi.RSSI();
@@ -333,17 +483,31 @@ void wsSendTelemetryTR(void *arg){
   
       if( xQueueWsPayloadSensors != NULL ){
         WSPayloadSensors payload;
-        if( xQueueReceive( xQueueWsPayloadSensors,  &( payload ), ( TickType_t ) 0 ) == pdPASS )
+        if( xQueueReceive( xQueueWsPayloadSensors,  &( payload ), ( TickType_t ) mySettings.itSr ) == pdPASS )
         {
-          if(payload.ppm != 0 && payload.cels != 0){
-            JsonObject sensors = doc.createNestedObject("sensors");
-            sensors[PSTR("ppm")] = payload.ppm;
-            sensors[PSTR("cels")] = payload.cels;
-            serializeJson(doc, buffer);
-            wsBroadcastTXT(buffer);
-            doc.clear();
-          }
-          
+          JsonObject tds = doc.createNestedObject("tds");
+          tds[PSTR("ppm")] = payload.ppm;
+          tds[PSTR("ppmRaw")] = payload.ppmRaw;
+          tds[PSTR("ppmAvg")] = payload.ppmAvg;
+          tds[PSTR("ppmMax")] = payload.ppmMax;
+          tds[PSTR("ppmMin")] = payload.ppmMin;
+          tds[PSTR("ts")] = payload.ts;
+          serializeJson(doc, buffer);
+          wsBroadcastTXT(buffer);
+          doc.clear();
+
+
+          JsonObject temperature = doc.createNestedObject("temperature");
+          temperature[PSTR("cels")] = payload.cels;
+          temperature[PSTR("celsAvg")] = payload.celsAvg;
+          temperature[PSTR("celsMax")] = payload.celsMax;
+          temperature[PSTR("celsMin")] = payload.celsMin;
+          temperature[PSTR("celsRaw")] = payload.celsRaw;
+          temperature[PSTR("ts")] = payload.ts;
+          serializeJson(doc, buffer);
+          wsBroadcastTXT(buffer);
+          doc.clear();
+         
         }
       }
 
@@ -357,7 +521,7 @@ void wsSendTelemetryTR(void *arg){
       }
       #endif
     }
-    vTaskDelay((const TickType_t) 1000 / portTICK_PERIOD_MS);
+    vTaskDelay((const TickType_t) mySettings.itSr / portTICK_PERIOD_MS);
   }
 }
 #endif
@@ -372,91 +536,4 @@ void onMQTTUpdateStart(){
 
 void onMQTTUpdateEnd(){
   
-}
-
-void sensorsTR(void *arg){
-  //Stream_Stats<float> _cels_;
-  //Stream_Stats<float> _ppm_;
-
-  unsigned long timerAttribute = millis();
-  unsigned long timerTelemetry = millis();
-
-  while (true)
-  {
-    bool flag_failure_readings = false;
-    myStates.flag_sensors = true;
-
-    float cels = 0;
-    float ppm = 0;
-
-    //read TDS from nano
-    unsigned long now = millis();
-    if(myStates.flag_sensors && !flag_failure_readings)
-    {
-      StaticJsonDocument<DOCSIZE_MIN> doc;
-      char buffer[DOCSIZE_MIN];
-      
-      if( (now - timerAttribute) > (mySettings.itSc * 1000))
-      {
-        doc[PSTR("method")] = PSTR("readSensors");
-        serialWriteToCoMcu(doc, true, 50);
-        if(doc[PSTR("cels")] != nullptr){cels = doc[PSTR("cels")].as<float>();}
-        if(doc[PSTR("ppm")] != nullptr){ppm = doc[PSTR("ppm")].as<float>();}
-
-        doc.clear();
-
-        // _cels_.Add(cels);
-        // _ppm_.Add(ppm);
-        
-        if(tb.connected() && config.provSent){
-          doc[PSTR("_ppm")] = ppm;
-          doc[PSTR("_cels")] = cels;
-          serializeJson(doc, buffer);
-          tbSendAttribute(buffer);
-          doc.clear();
-        }
-        
-
-        timerAttribute = now;
-      }
-
-      if( (now - timerTelemetry) > (mySettings.itS * 1000) )
-      {
-        if(ppm > 0 && ppm < 2000 && cels > 0 && cels < 100){
-          doc[PSTR("cels")] = cels;//_cels_.Get_Average();  
-          doc[PSTR("ppm")] = ppm;//_ppm_.Get_Average(); 
-
-          #ifdef USE_DISK_LOG  
-          writeCardLogger(doc);
-          #endif
-          if(tb.connected() && config.provSent)
-          {
-            serializeJson(doc, buffer);
-            if(tbSendTelemetry(buffer)){
-              
-            }
-          }
-          doc.clear();
-        }
-        //_cels_.Clear(); _ppm_.Clear();
-        timerTelemetry = now;
-      }
-
-    }
-
-    #ifdef USE_WEB_IFACE
-      if( xQueueWsPayloadSensors != NULL && (config.wsCount > 0) && myStates.flag_sensors && !flag_failure_readings)
-      {
-        WSPayloadSensors payload;
-        payload.ppm = ppm;
-        payload.cels = cels;
-        if( xQueueSend( xQueueWsPayloadSensors, &payload, ( TickType_t ) 1000 ) != pdPASS )
-        {
-          log_manager->debug(PSTR(__func__), PSTR("Failed to fill WSPayloadSensors. Queue is full. \n"));
-        }
-      }
-    #endif
-    
-    vTaskDelay((const TickType_t) 1000 / portTICK_PERIOD_MS);
-  }
 }

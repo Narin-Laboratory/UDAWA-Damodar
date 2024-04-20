@@ -36,6 +36,10 @@ void setup()
 
   tb.setBufferSize(1024);
 
+  mySettings.itDt = 1000;
+  mySettings.itSt = 5000;
+  saveSettings();
+
   #ifdef USE_WEB_IFACE
   xQueueWsPayloadSensors= xQueueCreate( 1, sizeof( struct WSPayloadSensors ) );
   #endif
@@ -340,7 +344,8 @@ void deviceTelemetry(){
       doc[PSTR("dt")] = rtc.getEpoch(); 
 
       serializeJson(doc, buffer);
-      tbSendAttribute(buffer);
+      //tbSendAttribute(buffer);
+      tbSendTelemetry(buffer);
     }
 }
 
@@ -360,7 +365,7 @@ void publishDeviceTelemetryTR(void * arg){
 
     
     unsigned long now = millis();
-    if( (now - timerDeviceTelemetry) > mySettings.itDt * 1000 ){
+    if( (now - timerDeviceTelemetry) > mySettings.itDt ){
       deviceTelemetry();
       timerDeviceTelemetry = now;
     }

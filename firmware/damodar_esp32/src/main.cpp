@@ -31,7 +31,7 @@ void setup()
     syncConfigCoMCU();
   }
   if(String(config.model) == String("Generic")){
-    strlcpy(config.model, "Gadadar", sizeof(config.model));
+    strlcpy(config.model, "Damodar", sizeof(config.model));
   }
 
   tb.setBufferSize(1024);

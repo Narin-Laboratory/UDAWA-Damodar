@@ -36,7 +36,7 @@ lib_deps =
 	https://github.com/me-no-dev/ESPAsyncWebServer.git
 	https://github.com/thingsboard/pubsubclient.git
 	https://github.com/Narin-Laboratory/thingsboard-arduino-sdk.git
-	https://github.com/akkoyun/Statistical.git
+	akkoyun/Statistical@2.4.4
 	https://github.com/Links2004/arduinoWebSockets.git
 	https://github.com/rweather/arduinolibs.git
 	https://github.com/Erriez/ErriezDS3231.git

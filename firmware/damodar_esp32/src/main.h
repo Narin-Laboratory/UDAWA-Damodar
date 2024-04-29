@@ -203,6 +203,9 @@ void onMQTTUpdateStart();
 void onMQTTUpdateEnd();
 void setPanic(const RPC_Data &data);
 void sensorsTR(void *arg);
+void RPCRequestAIAnalyzerProc(const JsonVariantConst &data);
+const RPC_Request_Callback RPCRequestAIAnalyzerCb(PSTR("AIAnalyzer"), &RPCRequestAIAnalyzerProc);
+bool RPCRequestAIAnalyzer();
 
 /**
  * @brief UDAWA Common Alarm Code Definition

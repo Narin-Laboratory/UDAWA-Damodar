@@ -121,7 +121,12 @@ void sensorsTR(void *arg){
         doc.clear();
         doc[PSTR("method")] = PSTR("readRawCels");
         serialWriteToCoMcu(doc, true, 1000);
-        if(doc[PSTR("celsRaw")] != nullptr){sensors.celsRaw = doc[PSTR("celsRaw")].as<float>();}
+        if(doc[PSTR("celsRaw")] != nullptr){sensors.celsRaw = doc[PSTR("celsRaw")].as<float>();
+          flag_failure_readings = true;
+        }
+        else{
+          flag_failure_readings = false;
+        }
         doc.clear();
 
         sensors.cels = calcKalmanFilter(sensors.celsRaw, mySettings.celsQ, mySettings.celsR, 
@@ -135,7 +140,12 @@ void sensorsTR(void *arg){
         doc.clear();
         doc[PSTR("method")] = PSTR("readRawTDS");
         serialWriteToCoMcu(doc, true, 255);
-        if(doc[PSTR("ppmRaw")] != nullptr){sensors.ppmRaw = doc[PSTR("ppmRaw")].as<float>();}
+        if(doc[PSTR("ppmRaw")] != nullptr){sensors.ppmRaw = doc[PSTR("ppmRaw")].as<float>();
+          flag_failure_readings = true;
+        }
+        else{
+          flag_failure_readings = false;
+        }
         doc.clear();
 
         sensors.ppm = calcKalmanFilter(sensors.ppmRaw, mySettings.tdsQ, mySettings.tdsR, 
@@ -460,6 +470,9 @@ void onWsEvent(const JsonObject &doc){
     else if(strcmp(cmd, (const char*) "reboot") == 0){
       reboot();
     }
+    else if(strcmp(cmd, (const char*) "RequestAIAnalyzer") == 0){
+      RPCRequestAIAnalyzer();
+    }
     #ifdef USE_DISK_LOG
     else if(strcmp(cmd, (const char*) PSTR("wsStreamCardLogger")) == 0){
       GLOBAL_TARGET_CLIENT_ID = doc[PSTR("num")].as<uint32_t>(); 
@@ -541,4 +554,24 @@ void onMQTTUpdateStart(){
 
 void onMQTTUpdateEnd(){
   
+}
+
+    
+void RPCRequestAIAnalyzerProc(const JsonVariantConst &data){
+  serializeJsonPretty(data, Serial);
+  char buffer[2048];
+  StaticJsonDocument<32> doc;
+  doc[PSTR("AIAnalyzer")] = data[PSTR("AIAnalyzer")];
+  serializeJson(doc, buffer);
+  #ifdef USE_WEB_IFACE
+  wsBroadcastTXT(buffer);
+  #endif
+}    
+
+bool RPCRequestAIAnalyzer(){
+  if (!tb.RPC_Request(RPCRequestAIAnalyzerCb)) {
+    return 1;
+    log_manager->warn(PSTR(__func__), PSTR("Failed to execute!\n"));
+  }
+  return 0;
 }

@@ -190,7 +190,9 @@ void sensorsTR(void *arg){
       {
         if(tb.connected() && config.provSent){
           doc[PSTR("_ppm")] = _ppm_.Get_Last();
-          doc[PSTR("_cels")] = _cels_.Get_Last();
+          if(_cels_.Get_Last() != 0){
+            doc[PSTR("_cels")] = _cels_.Get_Last();
+          }
           serializeJson(doc, buffer);
           tbSendAttribute(buffer);
           doc.clear();

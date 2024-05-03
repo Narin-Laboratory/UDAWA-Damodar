@@ -106,13 +106,13 @@ struct Settings
     R is the measurement noise covariance, representing the uncertainty in the sensor measurements.
     */
 
-    float tdsXEst = 100.0;
-    float tdsPEst = 1;
-    float tdsQ = 0.01;     
-    float tdsR = 1.0; 
-    float tdsK = 0.0;
-    float tdsPTmp = 0.0;
-    float tdsXTmp = 0.0;
+    float ecXEst = 100.0;
+    float ecPEst = 1;
+    float ecQ = 0.01;     
+    float ecR = 1.0; 
+    float ecK = 0.0;
+    float ecPTmp = 0.0;
+    float ecXTmp = 0.0;
     int TDSSamp = 50;
 
     float celsXEst = 25.0;
@@ -121,8 +121,7 @@ struct Settings
     float celsR = 1.0; 
     float celsK = 0.0;
     float celsPTmp = 0.0;
-    float celsXTmp = 0.0;
-    
+    float celsXTmp = 0.0;    
 };
 
 struct States
@@ -134,36 +133,17 @@ States myStates;
 #ifdef USE_WEB_IFACE
 struct WSPayloadSensors
 {
-    float ppm;
-    float ppmRaw;
-    float ppmAvg;
-    float ppmMax;
-    float ppmMin;
     float ec;
+    float ecRaw;
+    float ecAvg;
+    float ecMax;
+    float ecMin;
    
     float cels;
     float celsRaw;
     float celsAvg;
     float celsMax;
     float celsMin;
-
-    float volt;
-    float voltRaw;
-    float voltMin;
-    float voltMax;
-    float voltAvg;
-
-    float amp;
-    float ampRaw;
-    float ampMin;
-    float ampMax;
-    float ampAvg;
-
-    float watt;
-    float wattRaw;
-    float wattMin;
-    float wattMax;
-    float wattAvg;
 
     unsigned long ts;
 };
@@ -203,9 +183,12 @@ void onMQTTUpdateStart();
 void onMQTTUpdateEnd();
 void setPanic(const RPC_Data &data);
 void sensorsTR(void *arg);
-void RPCRequestAIAnalyzerProc(const JsonVariantConst &data);
-const RPC_Request_Callback RPCRequestAIAnalyzerCb(PSTR("AIAnalyzer"), &RPCRequestAIAnalyzerProc);
-bool RPCRequestAIAnalyzer();
+void RPCRequestDamodarAIAnalyzerProc(const JsonVariantConst &data);
+bool RPCRequestDamodarAIAnalyzer();
+void RPCGetGHParamsProc(const JsonVariantConst &data);
+bool RPCGetGHParams();
+void RPCSetGHParamsProc(const JsonVariantConst &data);
+bool RPCSetGHParams();
 
 /**
  * @brief UDAWA Common Alarm Code Definition

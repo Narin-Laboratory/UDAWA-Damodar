@@ -1,6 +1,6 @@
 [env:nano]
 platform = atmelavr
-board = nanoatmega328new
+board = nanoatmega328
 framework = arduino
 upload_port = COM5
 lib_deps =

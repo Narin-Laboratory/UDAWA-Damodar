@@ -94,15 +94,15 @@ float calcKalmanFilter(float raw, float &Q, float &R, float &x_est, float &P_est
 
 void sensorsTR(void *arg){
   Stream_Stats<float> _cels_;
-  Stream_Stats<float> _ppm_;
-  float ppmRaw = 0;
+  Stream_Stats<float> _ec_;
+  float ecRaw = 0;
   float celsRaw = 0;
 
   unsigned long timerReading = millis();
   unsigned long timerAttribute = millis();
   unsigned long timerTelemetry = millis();
   unsigned long timerReadRawCels = millis();
-  unsigned long timerReadRawTDS = millis();
+  unsigned long timerReadRawEC = millis();
   unsigned long timerReadRawPower = millis();
 
   while (true)
@@ -110,7 +110,7 @@ void sensorsTR(void *arg){
     bool flag_failure_readings = false;
     myStates.flag_sensors = true;
 
-    //read TDS from nano
+    //read EC from nano
     unsigned long now = millis();
     if(myStates.flag_sensors && !flag_failure_readings)
     {
@@ -121,11 +121,12 @@ void sensorsTR(void *arg){
         doc.clear();
         doc[PSTR("method")] = PSTR("readRawCels");
         serialWriteToCoMcu(doc, true, 1000);
-        if(doc[PSTR("celsRaw")] != nullptr){sensors.celsRaw = doc[PSTR("celsRaw")].as<float>();
-          flag_failure_readings = true;
+        if(doc[PSTR("celsRaw")] != nullptr){
+          sensors.celsRaw = doc[PSTR("celsRaw")].as<float>();
+          flag_failure_readings = false;
         }
         else{
-          flag_failure_readings = false;
+          flag_failure_readings = true;
         }
         doc.clear();
 
@@ -136,23 +137,24 @@ void sensorsTR(void *arg){
         timerReadRawCels = now;
       }
 
-      if((now - timerReadRawTDS) > 500){
+      if((now - timerReadRawEC) > 500){
         doc.clear();
-        doc[PSTR("method")] = PSTR("readRawTDS");
+        doc[PSTR("method")] = PSTR("readRawEC");
         serialWriteToCoMcu(doc, true, 255);
-        if(doc[PSTR("ppmRaw")] != nullptr){sensors.ppmRaw = doc[PSTR("ppmRaw")].as<float>();
-          flag_failure_readings = true;
-        }
-        else{
+        if(doc[PSTR("ecRaw")] != nullptr){
+          sensors.ecRaw = doc[PSTR("ecRaw")].as<float>() / 1000;
           flag_failure_readings = false;
         }
+        else{
+          flag_failure_readings = true;
+        }
         doc.clear();
 
-        sensors.ppm = calcKalmanFilter(sensors.ppmRaw, mySettings.tdsQ, mySettings.tdsR, 
-          mySettings.tdsXEst, mySettings.tdsPEst, mySettings.tdsK, mySettings.tdsPTmp, mySettings.tdsXTmp);
-        _ppm_.Add(sensors.ppm);
+        sensors.ec = calcKalmanFilter(sensors.ecRaw, mySettings.ecQ, mySettings.ecR, 
+          mySettings.ecXEst, mySettings.ecPEst, mySettings.ecK, mySettings.ecPTmp, mySettings.ecXTmp);
+        _ec_.Add(sensors.ec);
 
-        timerReadRawTDS = now;
+        timerReadRawEC = now;
       }
       
       if( (now - timerReading) > (mySettings.itSr))
@@ -162,11 +164,11 @@ void sensorsTR(void *arg){
           if( xQueueWsPayloadSensors != NULL && (config.wsCount > 0) && myStates.flag_sensors && !flag_failure_readings)
           {
             WSPayloadSensors payload;
-            payload.ppm = sensors.ppm;
-            payload.ppmRaw = sensors.ppmRaw;
-            payload.ppmAvg = sensors.ppmAvg;
-            payload.ppmMax = sensors.ppmMax;
-            payload.ppmMin = sensors.ppmMin;
+            payload.ec = sensors.ec;
+            payload.ecRaw = sensors.ecRaw;
+            payload.ecAvg = sensors.ecAvg;
+            payload.ecMax = sensors.ecMax;
+            payload.ecMin = sensors.ecMin;
 
             payload.cels = sensors.cels;
             payload.celsRaw = sensors.celsRaw;
@@ -189,7 +191,7 @@ void sensorsTR(void *arg){
       if( (now - timerAttribute) > (mySettings.itSa))
       {
         if(tb.connected() && config.provSent){
-          doc[PSTR("_ppm")] = _ppm_.Get_Last();
+          doc[PSTR("_ec")] = _ec_.Get_Last();
           if(_cels_.Get_Last() != 0){
             doc[PSTR("_cels")] = _cels_.Get_Last();
           }
@@ -202,17 +204,17 @@ void sensorsTR(void *arg){
 
       if( (now - timerTelemetry) > (mySettings.itSt) )
       {
-        sensors.ppmAvg = _ppm_.Get_Average();
-        sensors.ppmMax = _ppm_.Get_Max();
-        sensors.ppmMin = _ppm_.Get_Min();
+        sensors.ecAvg = _ec_.Get_Average();
+        sensors.ecMax = _ec_.Get_Max();
+        sensors.ecMin = _ec_.Get_Min();
 
         sensors.celsAvg = _cels_.Get_Average();
         sensors.celsMax = _cels_.Get_Max();
         sensors.celsMin = _cels_.Get_Min();
 
-        if(_ppm_.Get_Last() > 0 && _ppm_.Get_Last() < 2000 && _cels_.Get_Last() > 0 && _cels_.Get_Last() < 100){
+        if(_ec_.Get_Last() > 0 && _ec_.Get_Last() < 2000 && _cels_.Get_Last() > 0 && _cels_.Get_Last() < 100){
           doc[PSTR("cels")] = _cels_.Get_Average();  
-          doc[PSTR("ppm")] = _ppm_.Get_Average(); 
+          doc[PSTR("ec")] = _ec_.Get_Average(); 
 
           #ifdef USE_DISK_LOG  
           writeCardLogger(doc);
@@ -227,7 +229,7 @@ void sensorsTR(void *arg){
           doc.clear();
         }
         
-        _cels_.Clear(); _ppm_.Clear();
+        _cels_.Clear(); _ec_.Clear();
 
         timerTelemetry = now;
       }
@@ -356,7 +358,7 @@ void deviceTelemetry(){
       doc[PSTR("dt")] = rtc.getEpoch(); 
 
       serializeJson(doc, buffer);
-      //tbSendAttribute(buffer);
+      tbSendAttribute(buffer);
       tbSendTelemetry(buffer);
     }
 }
@@ -472,8 +474,11 @@ void onWsEvent(const JsonObject &doc){
     else if(strcmp(cmd, (const char*) "reboot") == 0){
       reboot();
     }
-    else if(strcmp(cmd, (const char*) "RequestAIAnalyzer") == 0){
-      RPCRequestAIAnalyzer();
+    else if(strcmp(cmd, (const char*) "DamodarAIAnalyzer") == 0){
+      RPCRequestDamodarAIAnalyzer();
+    }
+    else if(strcmp(cmd, (const char*) "GetGHParams") == 0){
+      RPCGetGHParams();
     }
     #ifdef USE_DISK_LOG
     else if(strcmp(cmd, (const char*) PSTR("wsStreamCardLogger")) == 0){
@@ -505,13 +510,13 @@ void wsSendTelemetryTR(void *arg){
         WSPayloadSensors payload;
         if( xQueueReceive( xQueueWsPayloadSensors,  &( payload ), ( TickType_t ) mySettings.itSr ) == pdPASS )
         {
-          JsonObject tds = doc.createNestedObject("tds");
-          tds[PSTR("ppm")] = payload.ppm;
-          tds[PSTR("ppmRaw")] = payload.ppmRaw;
-          tds[PSTR("ppmAvg")] = payload.ppmAvg;
-          tds[PSTR("ppmMax")] = payload.ppmMax;
-          tds[PSTR("ppmMin")] = payload.ppmMin;
-          tds[PSTR("ts")] = payload.ts;
+          JsonObject ec = doc.createNestedObject("ec");
+          ec[PSTR("ec")] = payload.ec;
+          ec[PSTR("ecRaw")] = payload.ecRaw;
+          ec[PSTR("ecAvg")] = payload.ecAvg;
+          ec[PSTR("ecMax")] = payload.ecMax;
+          ec[PSTR("ecMin")] = payload.ecMin;
+          ec[PSTR("ts")] = payload.ts;
           serializeJson(doc, buffer);
           wsBroadcastTXT(buffer);
           doc.clear();
@@ -559,21 +564,47 @@ void onMQTTUpdateEnd(){
 }
 
     
-void RPCRequestAIAnalyzerProc(const JsonVariantConst &data){
+void RPCRequestDamodarAIAnalyzerProc(const JsonVariantConst &data){
   serializeJsonPretty(data, Serial);
-  char buffer[2048];
-  StaticJsonDocument<32> doc;
-  doc[PSTR("AIAnalyzer")] = data[PSTR("AIAnalyzer")];
-  serializeJson(doc, buffer);
   #ifdef USE_WEB_IFACE
-  wsBroadcastTXT(buffer);
+  if( data[PSTR("DamodarAIAnalyzer")] != nullptr ){
+    char buffer[2048];
+    serializeJson(data, buffer);
+    wsBroadcastTXT(buffer);
+  }
   #endif
 }    
 
-bool RPCRequestAIAnalyzer(){
+bool RPCRequestDamodarAIAnalyzer(){
+  const RPC_Request_Callback RPCRequestAIAnalyzerCb(PSTR("DamodarAIAnalyzer"), &RPCRequestDamodarAIAnalyzerProc);
   if (!tb.RPC_Request(RPCRequestAIAnalyzerCb)) {
     return 1;
     log_manager->warn(PSTR(__func__), PSTR("Failed to execute!\n"));
   }
   return 0;
+}
+
+void RPCGetGHParamsProc(const JsonVariantConst &data){
+  #ifdef USE_WEB_IFACE
+  if( data[PSTR("GetGHParams")] != nullptr ){
+    char buffer[2048];
+    serializeJson(data, buffer);
+    wsBroadcastTXT(buffer);
+  }
+  #endif
+}
+bool RPCGetGHParams(){
+  const RPC_Request_Callback RPCRequestAIAnalyzerCb(PSTR("GetGHParams"), &RPCGetGHParamsProc);
+  if (!tb.RPC_Request(RPCRequestAIAnalyzerCb)) {
+    return 1;
+    log_manager->warn(PSTR(__func__), PSTR("Failed to execute!\n"));
+  }
+  return 0;
+}
+
+void RPCSetGHParamsProc(const JsonVariantConst &data){
+
+}
+bool RPCSetGHParams(){
+ return 0;
 }

@@ -1,23 +1,28 @@
 #include <Arduino.h>
 #include <libudawaatmega328.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#include <ArduinoJson.h>
+
+#define EC_SAMPLING_COUNT 50
 
 struct Settings
 {
-    int pinTdsData = A0; // Pin data TDS
-    int pinSuhuData = 4; // Pin data suhu
+    int pinEC = A0; 
+    int pinCels = 4; 
+    int pinLoad = 9;
+    int pinFan = 10;
+
+    float VREF = 5.0;  
+
+    int ECSamp = 50;   
 };
 
 struct Sensors
 {
-   float ppm; // Pembacaan TDS yang difilter
-   float cels; // Pembacaan suhu
-
-   //parameter Kalman Filter
-   float Q = 0.1; // Process noise covariance
-   float R = 0.01; // Measurement noise covariance
-   float P = 1.0; // Estimation error covariance
-   float K; // Kalman gain
-   float X = 0; // Filtered measurement value (initial guess)
+   float ecRaw;
+   float celsRaw;
 };
 
-void readSensors();
+float readRawCels();
+float readRawEC();

@@ -474,10 +474,10 @@ void onWsEvent(const JsonObject &doc){
     else if(strcmp(cmd, (const char*) "reboot") == 0){
       reboot();
     }
-    else if(strcmp(cmd, (const char*) "DamodarAIAnalyzer") == 0){
+    else if(strcmp(cmd, (const char*) "damodarAIAnalyzer") == 0){
       RPCRequestDamodarAIAnalyzer();
     }
-    else if(strcmp(cmd, (const char*) "GetGHParams") == 0){
+    else if(strcmp(cmd, (const char*) "getGHParams") == 0){
       RPCGetGHParams();
     }
     #ifdef USE_DISK_LOG
@@ -567,7 +567,7 @@ void onMQTTUpdateEnd(){
 void RPCRequestDamodarAIAnalyzerProc(const JsonVariantConst &data){
   serializeJsonPretty(data, Serial);
   #ifdef USE_WEB_IFACE
-  if( data[PSTR("DamodarAIAnalyzer")] != nullptr ){
+  if( data[PSTR("damodarAIAnalyzer")] != nullptr ){
     char buffer[2048];
     serializeJson(data, buffer);
     wsBroadcastTXT(buffer);
@@ -576,7 +576,7 @@ void RPCRequestDamodarAIAnalyzerProc(const JsonVariantConst &data){
 }    
 
 bool RPCRequestDamodarAIAnalyzer(){
-  const RPC_Request_Callback RPCRequestAIAnalyzerCb(PSTR("DamodarAIAnalyzer"), &RPCRequestDamodarAIAnalyzerProc);
+  const RPC_Request_Callback RPCRequestAIAnalyzerCb(PSTR("damodarAIAnalyzer"), &RPCRequestDamodarAIAnalyzerProc);
   if (!tb.RPC_Request(RPCRequestAIAnalyzerCb)) {
     return 1;
     log_manager->warn(PSTR(__func__), PSTR("Failed to execute!\n"));
@@ -586,7 +586,7 @@ bool RPCRequestDamodarAIAnalyzer(){
 
 void RPCGetGHParamsProc(const JsonVariantConst &data){
   #ifdef USE_WEB_IFACE
-  if( data[PSTR("GetGHParams")] != nullptr ){
+  if( data[PSTR("getGHParams")] != nullptr ){
     char buffer[2048];
     serializeJson(data, buffer);
     wsBroadcastTXT(buffer);
@@ -594,7 +594,7 @@ void RPCGetGHParamsProc(const JsonVariantConst &data){
   #endif
 }
 bool RPCGetGHParams(){
-  const RPC_Request_Callback RPCRequestAIAnalyzerCb(PSTR("GetGHParams"), &RPCGetGHParamsProc);
+  const RPC_Request_Callback RPCRequestAIAnalyzerCb(PSTR("getGHParams"), &RPCGetGHParamsProc);
   if (!tb.RPC_Request(RPCRequestAIAnalyzerCb)) {
     return 1;
     log_manager->warn(PSTR(__func__), PSTR("Failed to execute!\n"));

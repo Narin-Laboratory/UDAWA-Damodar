@@ -480,6 +480,9 @@ void onWsEvent(const JsonObject &doc){
     else if(strcmp(cmd, (const char*) "getGHParams") == 0){
       RPCGetGHParams();
     }
+    else if(strcmp(cmd, (const char*) "getConfig") == 0){
+      syncClientAttr(2);
+    }
     #ifdef USE_DISK_LOG
     else if(strcmp(cmd, (const char*) PSTR("wsStreamCardLogger")) == 0){
       GLOBAL_TARGET_CLIENT_ID = doc[PSTR("num")].as<uint32_t>(); 

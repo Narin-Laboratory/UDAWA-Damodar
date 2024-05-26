@@ -1,10 +1,11 @@
 /**
  * UDAWA - Universal Digital Agriculture Watering Assistant
- * Firmware for Vanilla UDAWA Board (Starter Kit)
+ * Firmware for Damodar UDAWA Board (Fertigation Water Monitoring)
  * Licensed under aGPLv3
  * Researched and developed by PRITA Research Group & Narin Laboratory
  * prita.undiknas.ac.id | narin.co.id
 **/
+
 #ifndef main_h
 #define main_h
 #include <Arduino.h>
@@ -56,12 +57,12 @@ ny6l9/duT2POAsUN5IwHGDu8b2NT+vCUQRFVHY31
 #define USE_WEB_IFACE
 #define USE_ASYNC_WEB
 #define USE_INTERNAL_UI
-//#define USE_HW_RTC
+#define USE_HW_RTC
 #define USE_WIFI_OTA
 //#define USE_WIFI_LOGGER
 //#define USE_SDCARD_LOG
-//#define USE_SPIFFS_LOG
-//#define USE_DISK_LOG
+#define USE_SPIFFS_LOG
+#define USE_DISK_LOG
 #define STACKSIZE_WIFIKEEPER 3000
 #define STACKSIZE_SETALARM 3700
 #define STACKSIZE_WIFIOTA 4096
@@ -74,19 +75,53 @@ ny6l9/duT2POAsUN5IwHGDu8b2NT+vCUQRFVHY31
 
 #include <libudawa.h>
 #include <TimeLib.h>
+#include <Statistical.h>
 
 using namespace libudawa;
 const char* settingsPath = PSTR("/settings.json");
 struct Settings
 {
-    uint16_t itD = 60;
-    uint16_t itDc = 1;
+    uint16_t itDt = 60000;
+    uint16_t itDa = 10000;
+    uint16_t itDr = 1000;
 
-    uint16_t itS = 60;
-    uint16_t itSc = 5;
+    uint16_t itSt = 60000;
+    uint16_t itSa = 5000;
+    uint16_t itSr = 1000;
 
     uint8_t s1tx = 33; //V3.1 33, V3 32
     uint8_t s1rx = 32; //V3.1 32, V3 4
+
+    int pinTDS = 14; 
+    int pinCels = 4; 
+    int pinLoad = 9;
+    int pinFan = 10;
+
+    float VREF = 5.0;  
+
+    /*
+    x_est represents the current state estimation.
+    P_est represents the current estimation error covariance.
+    Q is the process noise covariance, representing the uncertainty in the process dynamics.
+    R is the measurement noise covariance, representing the uncertainty in the sensor measurements.
+    */
+
+    float ecXEst = 100.0;
+    float ecPEst = 1;
+    float ecQ = 0.01;     
+    float ecR = 1.0; 
+    float ecK = 0.0;
+    float ecPTmp = 0.0;
+    float ecXTmp = 0.0;
+    int TDSSamp = 50;
+
+    float celsXEst = 25.0;
+    float celsPEst = 1;
+    float celsQ = 0.01;     
+    float celsR = 1.0; 
+    float celsK = 0.0;
+    float celsPTmp = 0.0;
+    float celsXTmp = 0.0;    
 };
 
 struct States
@@ -98,14 +133,25 @@ States myStates;
 #ifdef USE_WEB_IFACE
 struct WSPayloadSensors
 {
-    float ppm;
     float ec;
+    float ecRaw;
+    float ecAvg;
+    float ecMax;
+    float ecMin;
+   
     float cels;
+    float celsRaw;
+    float celsAvg;
+    float celsMax;
+    float celsMin;
+
+    unsigned long ts;
 };
 QueueHandle_t xQueueWsPayloadSensors;
 #endif
 
 Settings mySettings;
+WSPayloadSensors sensors;
 
 BaseType_t xReturnedWsSendTelemetry;
 BaseType_t xReturnedPublishDevTel;
@@ -117,6 +163,8 @@ TaskHandle_t xHandleSensors = NULL;
 
 SemaphoreHandle_t xSemaphoreSensors = NULL;
 
+
+float calcKalmanFilter(float raw, float &Q, float &R, float &x_est, float &P_est, float &K, float &P_temp, float &x_temp);
 void loadSettings();
 void saveSettings();
 void attUpdateCb(const Shared_Attribute_Data &data);
@@ -135,6 +183,12 @@ void onMQTTUpdateStart();
 void onMQTTUpdateEnd();
 void setPanic(const RPC_Data &data);
 void sensorsTR(void *arg);
+void RPCRequestDamodarAIAnalyzerProc(const JsonVariantConst &data);
+bool RPCRequestDamodarAIAnalyzer();
+void RPCGetGHParamsProc(const JsonVariantConst &data);
+bool RPCGetGHParams();
+void RPCSetGHParamsProc(const JsonVariantConst &data);
+bool RPCSetGHParams();
 
 /**
  * @brief UDAWA Common Alarm Code Definition

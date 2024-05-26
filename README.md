@@ -1,4 +1,4 @@
-# UDAWA Damodar: Hydroponic Monitoring and Control
+# UDAWA Damodar: Hydroponic Nutrient Solution Monitoring
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![UDAWA Platform](https://img.shields.io/badge/Platform-UDAWA-brightgreen)](https://narin.co.id)

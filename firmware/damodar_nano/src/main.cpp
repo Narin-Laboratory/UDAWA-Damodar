@@ -2,6 +2,7 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <ArduinoJson.h>
+#include <GravityTDS.h>
 
 libudawaatmega328 nano;
 Settings mySettings;
@@ -9,11 +10,14 @@ Sensors sensors;
 
 OneWire oneWireDS18B20(mySettings.pinSuhuData);
 DallasTemperature ds18b20(&oneWireDS18B20);
-
-
+GravityTDS gravityTDS;
 
 void setup() {
-  // put your setup code here, to run once:
+  ds18b20.begin();
+  gravityTDS.setPin(mySettings.pinTdsData);
+  gravityTDS.setAref(5.0);
+  gravityTDS.setAdcRange(1024);
+  gravityTDS.begin();
   nano.begin();
 }
 
@@ -41,20 +45,23 @@ void loop() {
   doc.clear();
 }
 void readSensors() {
-  // Baca suhu
-  ds18b20.requestTemperatures();
-  sensors.cels = ds18b20.getTempCByIndex(0);
-  
-  // Baca dan filter pembacaan TDS
-  int analogValue = analogRead(mySettings.pinTdsData);
-  float voltage = analogValue * (5.0 / 1023.0);
-  float tdsRawValue = (voltage - 0.0) * 314.34; //koveksi tegangan ke ppm
-  
-  
-  // Update filter Kalman
-  sensors.P = sensors.P + sensors.Q;
-  sensors.K = sensors.P / (sensors.P + sensors.R);
-  sensors.X = sensors.X + sensors.K * (tdsRawValue - sensors.X);
-  sensors.P = (1 - sensors.K) * sensors.P;
-  sensors.ppm = sensors.X;
+    //Baca suhu
+    ds18b20.requestTemperatures();
+
+    //Baca TdS dengan set nilai suhu
+    gravityTDS.setTemperature(ds18b20.getTempCByIndex(0));
+    gravityTDS.update();
+    float tdsValue = gravityTDS.getTdsValue();
+
+  //Kalman Filter untuk TDS
+   sensors.P = sensors.P + sensors.Q;
+   sensors.K = sensors.P / (sensors.P + sensors.R);
+   sensors.X = sensors.X + sensors.K * (tdsValue - sensors.X);
+   sensors.P = (1 - sensors.K) * sensors.P;
+
+
+  // Menyesuaikan pembacaan TDS dengan faktor koreksi
+    float correctionFactor = 345.0 / 396.0;
+    sensors.ppm = sensors.X * correctionFactor; // Menyesuaikan nilai ppm dengan faktor koreksi
+    sensors.cels = ds18b20.getTempCByIndex(0); //Nilai Suhu
 }

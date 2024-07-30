@@ -83,7 +83,7 @@ struct Settings
     uint16_t itDc = 1;
 
     uint16_t itS = 60;
-    uint16_t itSc = 5;
+    uint16_t itSc = 10;
 
     uint8_t s1tx = 33; //V3.1 33, V3 32
     uint8_t s1rx = 32; //V3.1 32, V3 4

@@ -1,0 +1,12 @@
+constexpr char provDK[] PROGMEM = "3auv9gmorj97njjgwu85";
+constexpr char provDS[] PROGMEM = "4vupk9wrd4l0i5r73tkk";
+constexpr char accTkn[] PROGMEM = ""; //token thingsboard
+constexpr char wssid[] PROGMEM = "SweetHome"; //menganti nama wifi pribadi
+constexpr char wpass[] PROGMEM = "ecy01010"; //password wifi
+constexpr char dssid[] PROGMEM = "UDAWA";
+constexpr char dpass[] PROGMEM = "defaultkey";
+constexpr char upass[] PROGMEM = "d16f5ea525d3462084d76b9d663a6e01";
+constexpr char webApiKey[] PROGMEM = "defaultkey";
+int port = 8883;
+constexpr char broker[] PROGMEM = "prita.undiknas.ac.id";
+constexpr char spiffsBinUrl[] PROGMEM = "http://prita.undinas.ac.id/cdn/firmware/damodar.spiffs.bin";

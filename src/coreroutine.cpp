@@ -370,6 +370,15 @@ void coreroutineDoInit(){
     http.serveStatic("/css", LittleFS, "/ui/css");
     http.serveStatic("/assets", LittleFS, "/ui/assets");
     http.serveStatic("/locales", LittleFS, "/ui/locales");
+    http.on("/damodar", HTTP_GET, [](AsyncWebServerRequest *request){
+      request->redirect("/");
+    });
+    http.on("/gadadar", HTTP_GET, [](AsyncWebServerRequest *request){
+      request->redirect("/");
+    });
+    http.on("/murari", HTTP_GET, [](AsyncWebServerRequest *request){
+      request->redirect("/");
+    });
 
     ws.onEvent([](AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len) {
         coreroutineOnWsEvent(server, client, type, arg, data, len);
@@ -420,6 +429,15 @@ void coreroutineStartServices(){
       http.serveStatic("/css", LittleFS, "/ui/css");
       http.serveStatic("/assets", LittleFS, "/ui/assets");
       http.serveStatic("/locales", LittleFS, "/ui/locales");
+      http.on("/damodar", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->redirect("/");
+      });
+      http.on("/gadadar", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->redirect("/");
+      });
+      http.on("/murari", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->redirect("/");
+      });
 
       ws.onEvent([](AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len) {
           coreroutineOnWsEvent(server, client, type, arg, data, len);
@@ -574,8 +592,8 @@ void coreroutineSetLEDBuzzer(uint8_t color, uint8_t isBlink, int32_t blinkCount,
   //Auto by network
   case 0:
     if(false){
-      r = !config.state.LEDOn;
-      g = !config.state.LEDOn;
+      r = config.state.LEDOn;
+      g = config.state.LEDOn;
       b = config.state.LEDOn;
     }
     else if(WiFi.status() == WL_CONNECTED && WiFi.getMode() == WIFI_MODE_STA){

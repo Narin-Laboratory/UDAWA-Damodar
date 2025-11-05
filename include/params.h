@@ -79,7 +79,7 @@ static constexpr char tbAddr[] PROGMEM = "prita.undiknas.ac.id";
 static const int tbPort = 1883;
 static constexpr char tbAddr[] PROGMEM = "udawa.local";
 #endif
-static constexpr char binURL[] PROGMEM = "http://udawa.or.id/cdn/murari/littlefs.bin";
+static constexpr char binURL[] PROGMEM = "http://udawa.or.id/cdn/damodar/littlefs.bin";
 static constexpr char model[] PROGMEM = "Damodar";
 static constexpr char hname[] PROGMEM = "Damodar";
 static constexpr char group[] PROGMEM = "Damodar";
@@ -95,7 +95,7 @@ static const bool LEDOn = false;
 static const uint8_t pinLEDR = 27;
 static const uint8_t pinLEDG = 14;
 static const uint8_t pinLEDB = 12;
-static const uint8_t pinBuzz = 32;
+static const uint8_t pinBuzz = 100;
 
 const uint8_t s1tx = 26; //Neo 26, V3.1 33, V3 32
 const uint8_t s1rx = 25; //Neo 25, V3.1 32, V3 4

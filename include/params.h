@@ -104,7 +104,7 @@ const unsigned long intvAttr = 5;
 const unsigned long intvTele = 900;
 
 const bool fEnviroSensorDummy = false;
-const unsigned long enviroSensorAlarmTimer = 3000;
+const unsigned long enviroSensorAlarmTimer = 30;  //in seconds
 
 // Default safe thresholds for environment sensors
 // Absolute validity still uses sensor spec (e.g., temp -40..125, RH 0..100)

@@ -572,6 +572,12 @@ void coreroutineAlarmTaskRoutine(void *arg){
           #ifdef USE_LOCAL_WEB_INTERFACE
           wsBcast(doc);
           #endif
+
+          #ifdef USE_IOT
+          doc.clear();
+          doc[PSTR("alarm")] = alarmMsg.code;
+          iotSendTele(doc);
+          #endif
         }
         coreroutineSetLEDBuzzer(alarmMsg.color, alarmMsg.blinkCount > 0 ? true : false, alarmMsg.blinkCount, alarmMsg.blinkDelay);
         logger->debug(PSTR(__func__), PSTR("Alarm code: %d, color: %d, blinkCount: %d, blinkDelay: %d\n"), alarmMsg.code, alarmMsg.color, alarmMsg.blinkCount, alarmMsg.blinkDelay);

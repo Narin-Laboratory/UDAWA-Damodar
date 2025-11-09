@@ -74,8 +74,8 @@ struct AppState {
     float battVolt = 0.0;
     float battPercent = 0.0;
     float battAccurPercent = 0.0;
-    unsigned long lastBattGaugeRead = 0;
-    uint16_t intvReadBattGauge = 60;
+    unsigned long lastBattGaugeSend = 0;
+    uint16_t intvSendBattGauge = 900;
 
     // TDS sensor calibration parameters (adjustable at runtime)
     float tdsVRef = 5.0;           // Reference voltage for TDS sensor (5V power rail)

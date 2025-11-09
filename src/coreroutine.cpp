@@ -225,6 +225,7 @@ void coreroutineLoop(){
         sysInfo[PSTR("datetime")] = RTC.getDateTime();
         sysInfo[PSTR("rssi")] = wiFiHelper.rssiToPercent(WiFi.RSSI());
         #ifdef USE_MAX17048
+        coreroutineReadBatteryGauge();
         sysInfo[PSTR("batt")] = appState.battAccurPercent > 100.0 ? 100.0 : appState.battAccurPercent;
         #else
         doc[PSTR("batt")] = 100;
@@ -250,13 +251,6 @@ void coreroutineLoop(){
         appState.lastAttrBcast = now;
       }
     #endif
-
-  #ifdef USE_MAX17048
-  if(now - appState.lastBattGaugeRead > appState.intvReadBattGauge * 1000){
-    coreroutineReadBatteryGauge();
-    appState.lastBattGaugeRead = now;
-  }
-  #endif
 }
 
 #ifdef USE_MAX17048
@@ -268,17 +262,21 @@ void coreroutineReadBatteryGauge(){
   appState.battAccurPercent = max17048.accuratePercent();
 
   #ifdef USE_IOT
-  JsonDocument doc;
+  unsigned long now = millis();
+  if(now - appState.lastBattGaugeSend > appState.intvSendBattGauge * 1000){
+    JsonDocument doc;
 
-  doc[PSTR("battADC")] = appState.battADC;
-  doc[PSTR("battVolt")] = appState.battVolt;
-  doc[PSTR("battPercent")] = appState.battPercent;
-  doc[PSTR("battAccurPercent")] = appState.battAccurPercent;
-  iotSendTele(doc);
-  #endif
+    doc[PSTR("battADC")] = appState.battADC;
+    doc[PSTR("battVolt")] = appState.battVolt;
+    doc[PSTR("battPercent")] = appState.battPercent;
+    doc[PSTR("battAccurPercent")] = appState.battAccurPercent;
+    iotSendTele(doc);
+    #endif
 
-  logger->debug(PSTR(__func__), PSTR("Battery - ADC: %.2f, Volt: %.2fV, Percent: %.2f%%, Accurate: %.2f%%\n"), 
-    appState.battADC, appState.battVolt, appState.battPercent, appState.battAccurPercent);
+    /*logger->debug(PSTR(__func__), PSTR("Battery - ADC: %.2f, Volt: %.2fV, Percent: %.2f%%, Accurate: %.2f%%\n"), 
+      appState.battADC, appState.battVolt, appState.battPercent, appState.battAccurPercent);*/
+    appState.lastBattGaugeSend = now;
+  }
 }
 #endif
 
@@ -1199,6 +1197,7 @@ void coreroutineSyncClientAttr(uint8_t direction){
 
     doc.clear();
     JsonObject cfg = doc[PSTR("cfg")].to<JsonObject>();
+    cfg[PSTR("hwid")] = config.state.hwid;
     cfg[PSTR("name")] = config.state.name;
     cfg[PSTR("model")] = config.state.model;
     cfg[PSTR("group")] = config.state.group;

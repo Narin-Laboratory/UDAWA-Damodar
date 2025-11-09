@@ -22,7 +22,7 @@ upload_port = COM3
 ;upload_port = 192.168.4.1  ;damodar.local
 ;upload_flags =
 ;	--port=3232
-;	--auth=harinama
+;	--auth=secret
 ;	--host_port=3232
 build_flags =
 	${env.build_flags}

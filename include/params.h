@@ -5,7 +5,7 @@
 #define SERIAL_BAUD_RATE 115200UL
 #define COMPILED __DATE__ " " __TIME__
 #define CURRENT_FIRMWARE_TITLE "Damodar"
-#define CURRENT_FIRMWARE_VERSION "0.0.1"
+#define CURRENT_FIRMWARE_VERSION "0.0.2"
 
 #define USE_MAX17048
 
@@ -110,7 +110,7 @@ const unsigned long enviroSensorAlarmTimer = 30;  //in seconds
 // Absolute validity still uses sensor spec (e.g., temp -40..125, RH 0..100)
 const float tempSafeHigh = 50.0;  // deg C
 const float tempSafeLow  = 5.0;   // deg C
-const float rhSafeHigh   = 85.0;  // %RH
+const float rhSafeHigh   = 99.0;  // %RH
 const float rhSafeLow    = 15.0;  // %RH
 
 // Default safe thresholds for water quality sensors

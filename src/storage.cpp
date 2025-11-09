@@ -88,8 +88,8 @@ void storageConvertAppState(JsonDocument &doc, bool direction, bool load_default
     if(!doc["battVolt"].isNull()) appState.battVolt = doc["battVolt"].as<float>(); else if(load_defaults) appState.battVolt = 0.0;
     if(!doc["battPercent"].isNull()) appState.battPercent = doc["battPercent"].as<float>(); else if(load_defaults) appState.battPercent = 0.0;
     if(!doc["battAccurPercent"].isNull()) appState.battAccurPercent = doc["battAccurPercent"].as<float>(); else if(load_defaults) appState.battAccurPercent = 0.0;
-    if(!doc["lastBattGaugeRead"].isNull()) appState.lastBattGaugeRead = doc["lastBattGaugeRead"].as<unsigned long>(); else if(load_defaults) appState.lastBattGaugeRead = 0;
-    if(!doc["intvReadBattGauge"].isNull()) appState.intvReadBattGauge = doc["intvReadBattGauge"].as<uint16_t>(); else if(load_defaults) appState.intvReadBattGauge = 60;
+    if(!doc["lastBattGaugeSend"].isNull()) appState.lastBattGaugeSend = doc["lastBattGaugeSend"].as<unsigned long>(); else if(load_defaults) appState.lastBattGaugeSend = 0;
+    if(!doc["intvSendBattGauge"].isNull()) appState.intvSendBattGauge = doc["intvSendBattGauge"].as<uint16_t>(); else if(load_defaults) appState.intvSendBattGauge = 60;
     // TDS sensor calibration parameters
     if(!doc["tdsVRef"].isNull()) appState.tdsVRef = doc["tdsVRef"].as<float>(); else if(load_defaults) appState.tdsVRef = tdsVRef;
     if(!doc["tdsFactor"].isNull()) appState.tdsFactor = doc["tdsFactor"].as<float>(); else if(load_defaults) appState.tdsFactor = tdsFactor;
@@ -114,8 +114,8 @@ void storageConvertAppState(JsonDocument &doc, bool direction, bool load_default
     doc[PSTR("battVolt")] = appState.battVolt;
     doc[PSTR("battPercent")] = appState.battPercent;
     doc[PSTR("battAccurPercent")] = appState.battAccurPercent;
-    doc[PSTR("lastBattGaugeRead")] = appState.lastBattGaugeRead;
-    doc[PSTR("intvReadBattGauge")] = appState.intvReadBattGauge;
+    doc[PSTR("lastBattGaugeSend")] = appState.lastBattGaugeSend;
+    doc[PSTR("intvSendBattGauge")] = appState.intvSendBattGauge;
     // TDS sensor calibration parameters
     doc[PSTR("tdsVRef")] = appState.tdsVRef;
     doc[PSTR("tdsFactor")] = appState.tdsFactor;
